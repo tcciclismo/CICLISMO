@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <link rel="stylesheet" type="text/css" href="TELA_TCC.css" />
+  <title>BIKE TRAIL</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.4/dist/jquery.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title></title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <style>
+    .comment-form {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+
+<body>
+
+<style>
+  body{
+  background-color: #1C1C1C; 
+}
+hr{
+  background-color: gray;
+}
+.nav-link{
+  color: red;
+}
+</style>
+
+  <!-- CODIGO DO LOGOTIPO-->
+
+  <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
+
+    <a class="navbar-brand" href="#">
+      <img src="LOGOTIPO TCC.png" alt="logo" style="width:40px;">
+    </a>
+
+    <!-- LINKS DA BARRA DE NAVEGAÇÃO-->
+
+    <ul class="navbar-nav">
+      <li class="nav-item">
+        <a class="nav-link" href="#">Sair</a>
+      </li>
+    </ul>
+    <form class="form-inline" action="/action_page.php">
+    </form>
+  </nav>
+
+  <div id="map" style="height: 800px;"></div>
+
+  <script>
+    var map = L.map('map').setView([-22.0121, -47.8917], 13);
+
+    // Tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+      maxZoom: 18
+    }).addTo(map);
+
+    var pointsOfInterest = [
+      {
+        name: 'Trilha da capela',
+        location: [-21.96327368025261, -47.895912670676736],
+        description: 'Um belo parque com muitas trilhas e atividades para toda a família.',
+        comments: [], // Initial comments array
+        marker: null // Reference to the marker object
+      },
+      {
+        name: 'Trilha Cachoeira da Babilonia',
+        location: [-21.979945389497512, -47.796632139544066],
+        description: 'Uma trilha desafiadora que leva a uma vista incrível da cidade.',
+        comments: [], // Initial comments array
+        marker: null // Reference to the marker object
+      },
+      {
+        name: 'Trilha da Natureza - UFSCAR',
+        location: [-21.979261285128672, -47.88383062349635],
+        description: 'Uma área verde com muitas trilhas ecológicas.',
+        comments: [], // Initial comments array
+        marker: null // Reference to the marker object
+      },
+    ];
+
+    var currentLocationMarker;
+
+    // Get user's current location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(function (position) {
+        var lat = position.coords.latitude;
+        var lon = position.coords.longitude;
+        var currentLocation = L.latLng(lat, lon);
+        if (currentLocationMarker) {
+          currentLocationMarker.setLatLng(currentLocation);
+        } else {
+          currentLocationMarker = L.marker(currentLocation).addTo(map);
+        }
+        map.setView(currentLocation);
+      });
+    }
+
+    pointsOfInterest.forEach(function (poi) {
+      var marker = L.marker(poi.location).addTo(map);
+      var popupContent = '<b>' + poi.name + '</b><br>' + poi.description;
+
+      // Create the comment form
+      var commentForm = document.createElement('form');
+      commentForm.classList.add('comment-form');
+      commentForm.innerHTML = '<div class="form-group">' +
+        '<label for="comment-' + poi.name + '">Comentário:</label>' +
+        '<textarea class="form-control" id="comment-' + poi.name + '" rows="3"></textarea>' +
+        '</div>' +
+        '<button type="submit" class="btn btn-primary">Enviar</button>';
+      popupContent += commentForm.outerHTML;
+
+      marker.bindPopup(popupContent);
+
+      // Handle comment form submission
+      commentForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        var commentTextarea = commentForm.querySelector('textarea');
+        var comment = commentTextarea.value.trim();
+        if (comment !== '') {
+          poi.comments.push(comment);
+          commentTextarea.value = '';
+          showComments(poi);
+        }
+      });
+
+      // Store a reference to the marker object in the pointsOfInterest array
+      poi.marker = marker;
+
+      // Add click event listener to the marker
+      marker.on('click', function () {
+        routingControl.spliceWaypoints(0, 2); // Remove waypoints from previous route
+        routingControl.spliceWaypoints(0, 0, currentLocationMarker.getLatLng(), marker.getLatLng()); // Add new waypoints
+        routingControl.route(); // Calculate and display the route
+      });
+    });
+
+    var routingControl = L.Routing.control({
+      waypoints: [],
+      routeWhileDragging: true,
+      geocoder: L.Control.Geocoder.nominatim(),
+      router: new L.Routing.osrmv1({
+        serviceUrl: 'https://router.project-osrm.org/route/v1'
+      })
+    }).addTo(map);
+
+    // Function to display comments in the marker's popup
+    function showComments(poi) {
+      var popup = poi.marker.getPopup();
+      var commentsContainer = popup.getContent().querySelector('.comments-container');
+      commentsContainer.innerHTML = '';
+      poi.comments.forEach(function (comment) {
+        var commentElement = document.createElement('div');
+        commentElement.textContent = comment;
+        commentsContainer.appendChild(commentElement);
+      });
+    }
+  </script>
+
+  <br><br>
+
+  <div id="demo" class="carousel slide" data-ride="carousel">
+
+    <!-- Indicators -->
+    <ul class="carousel-indicators">
+      <li data-target="#demo" data-slide-to="0" class="active"></li>
+      <li data-target="#demo" data-slide-to="1"></li>
+      <li data-target="#demo" data-slide-to="2"></li>
+    </ul>
+
+    <center>
+      <div id="demo" class="carousel slide" data-ride="carousel">
+        <ul class="carousel-indicators">
+          <li data-target="#demo" data-slide-to="0" class="active"></li>
+          <li data-target="#demo" data-slide-to="1"></li>
+          <li data-target="#demo" data-slide-to="2"></li>
+        </ul>
+        <div class="carousel-inner">
+          <div class="carousel-item active">
+            <img src="capela.jpg" alt="Trilha da capela" width="1100" height="500">
+            <div class="carousel-caption">
+              <h3>Trilha da capela</h3>
+              <p>Pequena trilha com aproximadamente 500m, cercada por fragmento de mata bem fechada, com algumas árvores identificadas com grandes placas de madeira.</p>
+            </div>
+          </div>
+          <div class="carousel-item">
+            <img src="babilonia2.jpg" alt="Trilha da babilonia" width="1100" height="500">
+            <div class="carousel-caption">
+              <h3>Trilha da Babilonia</h3>
+              <p>A trilha da Babilônia fica pertinho da cidade, com pouca estrada de terra e numa trilha relativamente fácil de descer, até mesmo de bicicleta.</p>
+            </div>
+          </div>
+          <div class="carousel-item">
+            <img src="trilhadanatureza2.jpg" alt="Natureza" width="1100" height="500">
+            <div class="carousel-caption">
+              <h3>Trilha da natureza</h3>
+              <p>A Trilha da Natureza está localizada dentro de uma área de reserva da Universidade Federal de São Carlos (UFSCar). O percurso da trilha é de aproximadamente 2 km.</p>
+            </div>
+          </div>
+        </div>
+        <a class="carousel-control-prev" href="#demo" data-slide="prev">
+          <span class="carousel-control-prev-icon"></span>
+        </a>
+        <a class="carousel-control-next" href="#demo" data-slide="next">
+          <span class="carousel-control-next-icon"></span>
+        </a>
+      </div>
+    </center>
+  </div>
+
+  <center>
+    <hr>
+    <p style="color: white">Telefone: (16)99125-003<br>
+      Email: On_Track@hotmail.com<br>
+      Endereço: São Joao da boa vista 890<br>
+      <hr></p>
+  </center>
+</body>
+
+</html>
